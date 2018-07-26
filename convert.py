@@ -10,7 +10,7 @@ from coremltools.proto import NeuralNetwork_pb2
 MODEL_DIR = 'models'
 
 print('Instantiating an empty Deeplabv3+ model...')
-keras_model = Deeplabv3(input_shape=(512, 512, 3),
+keras_model = Deeplabv3(input_shape=(384, 384, 3),
                         classes=19, weights='cityscapes')
 
 WEIGHTS_DIR = 'weights/mobilenetv2'
