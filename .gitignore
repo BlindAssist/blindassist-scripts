@@ -3,3 +3,4 @@ weights/
 __pycache__
 test.ipynb
 *.pyc
+*.mlmodel
