@@ -38,7 +38,7 @@ coreml_model = coremltools.converters.keras.convert(keras_model,
                         blue_bias=-1)
 
 coreml_model.author = 'Giovanni Terlingen'
-coreml_model.license = 'MIT License'
+coreml_model.license = 'GPLv3 License'
 coreml_model.short_description = 'Produces segmentation info for urban scene images.'
 
 coreml_model.save('cityscapes.mlmodel')
