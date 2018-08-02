@@ -31,7 +31,7 @@ print('converting...')
 coreml_model = coremltools.converters.keras.convert(keras_model,
                         input_names=['input_1'],
                         image_input_names='input_1', 
-                        output_names='bilinear_upsampling_2',
+                        output_names='up_sampling2d_2',
                         image_scale=2/255.0,
                         red_bias=-1,
                         green_bias=-1,
