@@ -8,10 +8,10 @@ import coremltools
 from coremltools.proto import NeuralNetwork_pb2
 
 MODEL_DIR = 'models'
+MLMODEL_NAME = 'cityscapes.mlmodel'
 
 print('Instantiating an empty Deeplabv3+ model...')
-keras_model = Deeplabv3(input_shape=(384, 384, 3),
-                        classes=19, weights='cityscapes')
+keras_model = Deeplabv3(input_shape=(384, 384, 3), classes=19)
 
 WEIGHTS_DIR = 'weights/mobilenetv2'
 print('Loading weights from', WEIGHTS_DIR)
@@ -41,5 +41,12 @@ coreml_model.author = 'Giovanni Terlingen'
 coreml_model.license = 'GPLv3 License'
 coreml_model.short_description = 'Produces segmentation info for urban scene images.'
 
-coreml_model.save('cityscapes.mlmodel')
-print('model converted')
+coreml_model.save(MLMODEL_NAME)
+print('model converted, optimizing...')
+
+# Load a model, lower its precision, and then save the smaller model.
+model_spec = coremltools.utils.load_spec(MLMODEL_NAME)
+model_fp16_spec = coremltools.utils.convert_neural_network_spec_weights_to_fp16(model_spec)
+coremltools.utils.save_spec(model_fp16_spec, MLMODEL_NAME)
+
+print('Done.')

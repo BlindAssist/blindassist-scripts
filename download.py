@@ -13,7 +13,6 @@ def get_mobilenetv2_filename(key):
     if 'Momentum' in filename:
         return None
 
-    # from TF to Keras naming
     filename = filename.replace('_weights', '_kernel')
     filename = filename.replace('_biases', '_bias')
 
@@ -27,7 +26,6 @@ def extract_tensors_from_checkpoint_file(filename, output_folder='weights'):
     reader = tf.train.NewCheckpointReader(filename)
 
     for key in reader.get_variable_to_shape_map():
-        # convert tensor name into the corresponding Keras layer weight name and save
         filename = get_mobilenetv2_filename(key)
 
         if (filename):

@@ -79,7 +79,6 @@ def _make_divisible(v, divisor, min_value=None):
     if min_value is None:
         min_value = divisor
     new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
-    # Make sure that round down does not go down by more than 10%.
     if new_v < 0.9 * v:
         new_v += divisor
     return new_v
@@ -92,7 +91,6 @@ def _inverted_res_block(inputs, expansion, stride, alpha, filters, block_id, ski
     prefix = 'expanded_conv_{}_'.format(block_id)
     
     if block_id:
-        # Expand
         x = Conv2D(expansion * in_channels, kernel_size=1, padding='same',
                    use_bias=False, activation=None,
                    name=prefix + 'expand')(x)
@@ -102,7 +100,6 @@ def _inverted_res_block(inputs, expansion, stride, alpha, filters, block_id, ski
     else:
         prefix = 'expanded_conv_'
 
-    # Depthwise
     x = DepthwiseConv2D(kernel_size=3, strides=stride, activation=None,
                         use_bias=False, padding='same', dilation_rate=(rate, rate),
                         name=prefix + 'depthwise')(x)
@@ -111,7 +108,6 @@ def _inverted_res_block(inputs, expansion, stride, alpha, filters, block_id, ski
 
     x = Activation(relu6, name=prefix + 'depthwise_relu')(x)
 
-    # Project
     x = Conv2D(pointwise_filters,
                kernel_size=1, padding='same', use_bias=False, activation=None,
                name=prefix + 'project')(x)
@@ -124,10 +120,7 @@ def _inverted_res_block(inputs, expansion, stride, alpha, filters, block_id, ski
     return x
 
 
-def Deeplabv3(weights='cityscapes', input_tensor=None, input_shape=(512, 512, 3), classes=19, alpha=1.):
-    if weights != 'cityscapes':
-        raise ValueError('Currently only the cityscapes weights are supported')
-
+def Deeplabv3(input_tensor=None, input_shape=(512, 512, 3), classes=19, alpha=1.):
     if K.backend() != 'tensorflow':
         raise RuntimeError('The Deeplabv3+ model is only available with '
                            'the TensorFlow backend.')
@@ -162,8 +155,7 @@ def Deeplabv3(weights='cityscapes', input_tensor=None, input_shape=(512, 512, 3)
     x = _inverted_res_block(x, filters=32, alpha=alpha, stride=1,
                                expansion=6, block_id=5, skip_connection=True)
 
-    # Stride in block 6 changed from 2 -> 1, so we need to use rate = 2
-    x = _inverted_res_block(x, filters=64, alpha=alpha, stride=1,  # 1!
+    x = _inverted_res_block(x, filters=64, alpha=alpha, stride=1,
                                expansion=6, block_id=6, skip_connection=False)
     x = _inverted_res_block(x, filters=64, alpha=alpha, stride=1, rate=2,
                                expansion=6, block_id=7, skip_connection=True)
@@ -189,42 +181,27 @@ def Deeplabv3(weights='cityscapes', input_tensor=None, input_shape=(512, 512, 3)
     x = _inverted_res_block(x, filters=320, alpha=alpha, stride=1, rate=4,
                                expansion=6, block_id=16, skip_connection=False)
 
-    # End of feature extractor
-
-    # Branching for Atrous Spatial Pyramid Pooling
-
-    # Image Feature branch
     b4 = AveragePooling2D(pool_size=(int(np.ceil(input_shape[0] / OS)), int(np.ceil(input_shape[1] / OS))))(x)
     b4 = Conv2D(256, (1, 1), padding='same', use_bias=False, name='image_pooling')(b4)
     b4 = BatchNormalization(name='image_pooling_BN', epsilon=1e-5)(b4)
     b4 = Activation('relu')(b4)
     b4 = UpSampling2D(size=(int(np.ceil(input_shape[0] / OS)), int(np.ceil(input_shape[1] / OS))), data_format="channels_last")(b4)
 
-    # Simple 1x1
     b0 = Conv2D(256, (1, 1), padding='same', use_bias=False, name='aspp0')(x)
     b0 = BatchNormalization(name='aspp0_BN', epsilon=1e-5)(b0)
     b0 = Activation('relu', name='aspp0_activation')(b0)
 
-    # There are only 2 branches in MobileNetV2. Not sure why
     x = Concatenate()([b4, b0])
-
     x = Conv2D(256, (1, 1), padding='same', use_bias=False, name='concat_projection')(x)
     x = BatchNormalization(name='concat_projection_BN', epsilon=1e-5)(x)
     x = Activation('relu')(x)
     x = Dropout(0.1)(x)
 
-    # DeepLab v.3+ decoder
-
-    # You can use it with arbitary number of classes
-    last_layer_name = 'logits_semantic'
-
-    x = Conv2D(classes, (1, 1), padding='same', name=last_layer_name)(x)
+    x = Conv2D(classes, (1, 1), padding='same', name='logits_semantic')(x)
     prev_shape = (int(np.ceil(input_shape[0] / OS)), int(np.ceil(input_shape[1] / OS)))
     upscale_size = (int(input_shape[0] / prev_shape[0]), int(input_shape[1] / prev_shape[1]))
     x = UpSampling2D(size=upscale_size, data_format="channels_last")(x)
 
-    # Ensure that the model takes into account
-    # any potential predecessors of `input_tensor`.
     if input_tensor is not None:
         inputs = get_source_inputs(input_tensor)
     else:
