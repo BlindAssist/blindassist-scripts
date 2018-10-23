@@ -1,5 +1,7 @@
 # BlindAssist model scripts
 [![Build Status](https://travis-ci.com/BlindAssist/blindassist-scripts.svg?branch=develop)](https://travis-ci.com/BlindAssist/blindassist-scripts)
+[![Stars](http://starveller.sigsev.io/api/repos/BlindAssist/blindassist-scripts/badge)](http://starveller.sigsev.io/BlindAssist/blindassist-scripts)
+[![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
 
 These scripts will download the pretrained DeepLabv3+ model based on MobileNetv2 from the Tensorflow model
 zoo. Since they trained their models on MobileNetV2, I decided to use their model as the base model for the
