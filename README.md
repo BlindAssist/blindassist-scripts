@@ -1,12 +1,13 @@
 # BlindAssist model scripts
+[![Build Status](https://travis-ci.com/BlindAssist/blindassist-scripts.svg?branch=develop)](https://travis-ci.com/BlindAssist/blindassist-scripts)
+
 These scripts will download the pretrained DeepLabv3+ model based on MobileNetv2 from the Tensorflow model
 zoo. Since they trained their models on MobileNetV2, I decided to use their model as the base model for the
 BlindAssist app.
 
-# Download and convert the model to CoreML
+# Download and convert the model to CoreML (macOS)
 - Clone this repo
-- Run `python download.py`
-- Run `python convert.py`
+- Run `./convert_model.sh`
 
 After that the model has been generated. Then add `cityscapes.mlmodel` to the BlindAssist application.
 
