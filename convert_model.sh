@@ -2,10 +2,6 @@
 
 brew install python@2
 
-sudo pip install --ignore-installed six==1.10.0
-sudo pip install --ignore-installed numpy==1.15.2
-sudo pip install --ignore-installed scipy==1.1.0
-
 sudo pip install coremltools==2.0
 sudo pip install tqdm==4.28.1
 sudo pip install tensorflow==1.5.0
