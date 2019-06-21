@@ -2,75 +2,26 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
+import tensorflow as tf
 
-from keras.models import Model
-from keras import layers
-from keras.layers import Input
-from keras.layers import Activation
-from keras.layers import Concatenate
-from keras.layers import Add
-from keras.layers import Dropout
-from keras.layers import BatchNormalization
-from keras.layers import Conv2D
-from keras.layers import DepthwiseConv2D
-from keras.layers import ZeroPadding2D
-from keras.layers import AveragePooling2D
-from keras.layers import UpSampling2D
-from keras.engine import Layer
-from keras.engine import InputSpec
-from keras.engine.topology import get_source_inputs
-from keras import backend as K
-from keras.applications import imagenet_utils
-from keras.utils import conv_utils
-from keras.utils.data_utils import get_file
-
-class BilinearUpsampling(Layer):
-
-    def __init__(self, upsampling=(2, 2), output_size=None, data_format=None, **kwargs):
-        super(BilinearUpsampling, self).__init__(**kwargs)
-
-        self.data_format = conv_utils.normalize_data_format(data_format)
-        self.input_spec = InputSpec(ndim=4)
-        if output_size:
-            self.output_size = conv_utils.normalize_tuple(
-                output_size, 2, 'output_size')
-            self.upsampling = None
-        else:
-            self.output_size = None
-            self.upsampling = conv_utils.normalize_tuple(
-                upsampling, 2, 'upsampling')
-
-    def compute_output_shape(self, input_shape):
-        if self.upsampling:
-            height = self.upsampling[0] * \
-                input_shape[1] if input_shape[1] is not None else None
-            width = self.upsampling[1] * \
-                input_shape[2] if input_shape[2] is not None else None
-        else:
-            height = self.output_size[0]
-            width = self.output_size[1]
-        return (input_shape[0],
-                height,
-                width,
-                input_shape[3])
-
-    def call(self, inputs):
-        if self.upsampling:
-            return K.tf.image.resize_bilinear(inputs, (inputs.shape[1] * self.upsampling[0],
-                                                       inputs.shape[2] * self.upsampling[1]),
-                                              align_corners=True)
-        else:
-            return K.tf.image.resize_bilinear(inputs, (self.output_size[0],
-                                                       self.output_size[1]),
-                                              align_corners=True)
-
-    def get_config(self):
-        config = {'upsampling': self.upsampling,
-                  'output_size': self.output_size,
-                  'data_format': self.data_format}
-        base_config = super(BilinearUpsampling, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+from tensorflow.python.keras.models import Model
+from tensorflow.python.keras import layers
+from tensorflow.python.keras.layers import Input
+from tensorflow.python.keras.layers import Lambda
+from tensorflow.python.keras.layers import Activation
+from tensorflow.python.keras.layers import Concatenate
+from tensorflow.python.keras.layers import Add
+from tensorflow.python.keras.layers import Dropout
+from tensorflow.python.keras.layers import BatchNormalization
+from tensorflow.python.keras.layers import Conv2D
+from tensorflow.python.keras.layers import DepthwiseConv2D
+from tensorflow.python.keras.layers import ZeroPadding2D
+from tensorflow.python.keras.layers import GlobalAveragePooling2D
+from tensorflow.python.keras.utils.layer_utils import get_source_inputs
+from tensorflow.python.keras.utils.data_utils import get_file
+from tensorflow.python.keras import backend as K
+from tensorflow.python.keras.activations import relu
+from tensorflow.python.keras.applications.imagenet_utils import preprocess_input
 
 def relu6(x):
     return K.relu(x, max_value=6)
@@ -84,7 +35,7 @@ def _make_divisible(v, divisor, min_value=None):
     return new_v
 
 def _inverted_res_block(inputs, expansion, stride, alpha, filters, block_id, skip_connection, rate=1):
-    in_channels = inputs._keras_shape[-1]
+    in_channels = inputs.shape[-1]
     pointwise_conv_filters = int(filters * alpha)
     pointwise_filters = _make_divisible(pointwise_conv_filters, 8)
     x = inputs
@@ -121,17 +72,10 @@ def _inverted_res_block(inputs, expansion, stride, alpha, filters, block_id, ski
 
 
 def Deeplabv3(input_tensor=None, input_shape=(512, 512, 3), classes=19, alpha=1.):
-    if K.backend() != 'tensorflow':
-        raise RuntimeError('The Deeplabv3+ model is only available with '
-                           'the TensorFlow backend.')
-
     if input_tensor is None:
         img_input = Input(shape=input_shape)
     else:
-        if not K.is_keras_tensor(input_tensor):
-            img_input = Input(tensor=input_tensor, shape=input_shape)
-        else:
-            img_input = input_tensor
+        img_input = input_tensor
 
     OS = 8
     first_block_filters = _make_divisible(32 * alpha, 8)
@@ -181,11 +125,19 @@ def Deeplabv3(input_tensor=None, input_shape=(512, 512, 3), classes=19, alpha=1.
     x = _inverted_res_block(x, filters=320, alpha=alpha, stride=1, rate=4,
                                expansion=6, block_id=16, skip_connection=False)
 
-    b4 = AveragePooling2D(pool_size=(int(np.ceil(input_shape[0] / OS)), int(np.ceil(input_shape[1] / OS))))(x)
-    b4 = Conv2D(256, (1, 1), padding='same', use_bias=False, name='image_pooling')(b4)
+    shape_before = tf.shape(x)
+    b4 = GlobalAveragePooling2D()(x)
+
+    b4 = Lambda(lambda x: K.expand_dims(x, 1))(b4)
+    b4 = Lambda(lambda x: K.expand_dims(x, 1))(b4)
+    b4 = Conv2D(256, (1, 1), padding='same',
+                use_bias=False, name='image_pooling')(b4)
     b4 = BatchNormalization(name='image_pooling_BN', epsilon=1e-5)(b4)
     b4 = Activation('relu')(b4)
-    b4 = UpSampling2D(size=(int(np.ceil(input_shape[0] / OS)), int(np.ceil(input_shape[1] / OS))), data_format="channels_last")(b4)
+
+    size_before = tf.keras.backend.int_shape(x)
+    b4 = Lambda(lambda x: tf.compat.v1.image.resize(x, size_before[1:3],
+                                                    method='bilinear', align_corners=True))(b4)
 
     b0 = Conv2D(256, (1, 1), padding='same', use_bias=False, name='aspp0')(x)
     b0 = BatchNormalization(name='aspp0_BN', epsilon=1e-5)(b0)
@@ -198,9 +150,10 @@ def Deeplabv3(input_tensor=None, input_shape=(512, 512, 3), classes=19, alpha=1.
     x = Dropout(0.1)(x)
 
     x = Conv2D(classes, (1, 1), padding='same', name='logits_semantic')(x)
-    prev_shape = (int(np.ceil(input_shape[0] / OS)), int(np.ceil(input_shape[1] / OS)))
-    upscale_size = (int(input_shape[0] / prev_shape[0]), int(input_shape[1] / prev_shape[1]))
-    x = UpSampling2D(size=upscale_size, data_format="channels_last")(x)
+    size_before3 = tf.keras.backend.int_shape(img_input)
+    x = Lambda(lambda xx: tf.compat.v1.image.resize(xx,
+                                                    size_before3[1:3],
+                                                    method='bilinear', align_corners=True))(x)
 
     if input_tensor is not None:
         inputs = get_source_inputs(input_tensor)
