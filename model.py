@@ -24,7 +24,7 @@ from tensorflow.python.keras.activations import relu
 from tensorflow.python.keras.applications.imagenet_utils import preprocess_input
 
 def relu6(x):
-    return K.relu(x, max_value=6)
+    return relu(x, max_value=6)
 
 def _make_divisible(v, divisor, min_value=None):
     if min_value is None:
@@ -160,7 +160,7 @@ def Deeplabv3(input_tensor=None, input_shape=(512, 512, 3), classes=19, alpha=1.
     else:
         inputs = img_input
 
-    model = Model(inputs, x, name='deeplabv3+')
+    model = Model(inputs, x, name='deeplabv3plus')
 
     return model
 

@@ -3,7 +3,7 @@ from __future__ import print_function
 import os
 import numpy as np
 import tensorflow as tf
-from keras.utils.data_utils import get_file
+from tensorflow.python.keras.utils.data_utils import get_file
 
 def get_mobilenetv2_filename(key):
     filename = str(key)
@@ -23,7 +23,7 @@ def extract_tensors_from_checkpoint_file(filename, output_folder='weights'):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    reader = tf.train.NewCheckpointReader(filename)
+    reader = tf.train.load_checkpoint(filename)
 
     for key in reader.get_variable_to_shape_map():
         filename = get_mobilenetv2_filename(key)

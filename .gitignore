@@ -5,3 +5,4 @@ test.ipynb
 *.pyc
 *.mlmodel
 .DS_Store
+*.h5

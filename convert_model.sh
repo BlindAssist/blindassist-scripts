@@ -1,12 +1,12 @@
 #!/bin/bash
 
 brew install python@2
+sudo pip install setuptools
 
-sudo pip install coremltools==3.0b1
-sudo pip install tensorflow==2.0.0a0
-sudo pip install setuptools==41.0.1
-sudo pip install keras==2.2.4
+sudo pip install coremltools==3.1
+sudo pip install tensorflow==2.0.0
 sudo pip install tqdm
+sudo pip install sympy
 
 python ./download.py
 python ./convert.py
