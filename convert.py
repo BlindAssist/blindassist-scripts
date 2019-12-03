@@ -29,6 +29,10 @@ for layer in tqdm(tf_model.layers):
             weights.append(weight_arr)
         layer.set_weights(weights)
 
+print('Loaded weights. Summary of model:\n')
+tf_model.summary();
+print('')
+
 print('Saving model...')
 tf_model.save(CHECKPOINT_LOCATION)
 
@@ -37,11 +41,7 @@ with CustomObjectScope({'relu6': relu6}):
     coreml_model = coremltools.converters.tensorflow.convert(CHECKPOINT_LOCATION,
                         input_names=['input_1'],
                         image_input_names='input_1', 
-                        output_names='up_sampling2d_2',
-                        image_scale=2/255.0,
-                        red_bias=-1,
-                        green_bias=-1,
-                        blue_bias=-1)
+                        output_names='lambda_3')
 
 coreml_model.author = 'Giovanni Terlingen'
 coreml_model.license = 'MIT License'
