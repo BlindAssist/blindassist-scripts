@@ -6,3 +6,4 @@ test.ipynb
 *.mlmodel
 .DS_Store
 *.h5
+coremltools/
